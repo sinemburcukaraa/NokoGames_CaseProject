@@ -26,13 +26,11 @@ public class PlayerController : MonoBehaviour
 
     void Update()
     {
-        // Joystick input al
         float h = joystick.Horizontal;
         float v = joystick.Vertical;
 
         moveDirection = new Vector3(h, 0, v).normalized;
 
-        // Yönlendirme
         if (moveDirection != Vector3.zero)
         {
             Quaternion targetRotation = Quaternion.LookRotation(moveDirection);
@@ -43,7 +41,6 @@ public class PlayerController : MonoBehaviour
             );
         }
 
-        // Animasyon kontrolü
         bool isMoving = moveDirection.magnitude > 0.1f;
         animator.SetBool("isRunning", isMoving);
     }
@@ -53,7 +50,6 @@ public class PlayerController : MonoBehaviour
         rb.MovePosition(rb.position + moveDirection * moveSpeed * Time.fixedDeltaTime);
     }
 
-    // // Hedef konuma otomatik hareket (AI veya sistem için)
     // public override void MoveToTarget(Vector3 position)
     // {
     //     Vector3 direction = (position - transform.position).normalized;
