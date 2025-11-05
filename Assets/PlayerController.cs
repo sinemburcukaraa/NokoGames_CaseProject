@@ -53,26 +53,26 @@ public class PlayerController : MonoBehaviour
         rb.MovePosition(rb.position + moveDirection * moveSpeed * Time.fixedDeltaTime);
     }
 
-    // Hedef konuma otomatik hareket (AI veya sistem için)
-    public void MoveToTarget(Vector3 position)
-    {
-        Vector3 direction = (position - transform.position).normalized;
-        rb.MovePosition(
-            Vector3.MoveTowards(rb.position, position, moveSpeed * Time.fixedDeltaTime)
-        );
+    // // Hedef konuma otomatik hareket (AI veya sistem için)
+    // public override void MoveToTarget(Vector3 position)
+    // {
+    //     Vector3 direction = (position - transform.position).normalized;
+    //     rb.MovePosition(
+    //         Vector3.MoveTowards(rb.position, position, moveSpeed * Time.fixedDeltaTime)
+    //     );
 
-        if (direction != Vector3.zero)
-        {
-            Quaternion targetRotation = Quaternion.LookRotation(direction);
-            transform.rotation = Quaternion.Lerp(
-                transform.rotation,
-                targetRotation,
-                rotationSpeed * Time.fixedDeltaTime
-            );
-        }
+    //     if (direction != Vector3.zero)
+    //     {
+    //         Quaternion targetRotation = Quaternion.LookRotation(direction);
+    //         transform.rotation = Quaternion.Lerp(
+    //             transform.rotation,
+    //             targetRotation,
+    //             rotationSpeed * Time.fixedDeltaTime
+    //         );
+    //     }
 
-        bool isMoving = Vector3.Distance(transform.position, position) > 0.05f;
-        animator.SetBool("isRunning", isMoving);
-    }
+    //     bool isMoving = Vector3.Distance(transform.position, position) > 0.05f;
+    //     animator.SetBool("isRunning", isMoving);
+    // }
 }
 
