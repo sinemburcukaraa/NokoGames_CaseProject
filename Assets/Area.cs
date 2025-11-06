@@ -4,31 +4,35 @@ using DG.Tweening;
 using UnityEngine;
 public enum AreaType
 {
-    Input,  // Karakter objeleri bırakır
-    Output  // Karakter objeleri alır
+    Input,  // Karakter veya AI objeleri bırakır
+    Output  // Karakter veya AI objeleri alır
 }
 
+[RequireComponent(typeof(Collider))]
 public class Area : MonoBehaviour, IInteractable
 {
     [Header("Settings")]
     [SerializeField] private Transform stackPoint;
-    [SerializeField] private AreaType areaType = AreaType.Output; // default Output
-    [SerializeField] private int columns = 2;  // grid columns
-    [SerializeField] private int rows = 2;     // grid rows
+    [SerializeField] private AreaType areaType = AreaType.Output;
+    [SerializeField] private int columns = 2;
+    [SerializeField] private int rows = 2;
     [SerializeField] private float spacingX = 1f;
     [SerializeField] private float spacingZ = 1f;
-    [SerializeField] private float layerHeight = 0.5f; // Y offset per layer
+    [SerializeField] private float layerHeight = 0.5f;
     [SerializeField] private float jumpHeight = 1f;
     [SerializeField] private float jumpDuration = 0.5f;
+    [SerializeField] private int maxCapacity = 20;
+
+    [Header("Accepted Object Tags (Optional)")]
+    [SerializeField] private List<string> acceptedTags = new(); // Boş ise tüm objeleri alır
 
     private List<GameObject> storedObjects = new();
     private int nextGridIndex = 0;
     private bool isPlayerInside = false;
-    [SerializeField] private int maxCapacity = 20; // maksimum obje sayısı
 
-    // Event: Machine objeleri aldığında tetiklenir
     public event System.Action<GameObject> OnObjectTakenByMachine;
 
+    #region Trigger
     private void OnTriggerEnter(Collider other)
     {
         if (other.CompareTag("Player")) isPlayerInside = true;
@@ -38,31 +42,37 @@ public class Area : MonoBehaviour, IInteractable
     {
         if (other.CompareTag("Player")) isPlayerInside = false;
     }
+    #endregion
+
+    #region Object Management
+    public bool IsFull() => storedObjects.Count >= maxCapacity;
+    public bool HasAnyObject() => storedObjects.Count > 0;
+    public int ObjectCount => storedObjects.Count;
+
+    public bool CanAcceptObject(GameObject obj)
+    {
+        return !IsFull() && (acceptedTags.Count == 0 || acceptedTags.Contains(obj.tag));
+    }
 
     public void AddObject(GameObject obj)
     {
-        // if (storedObjects.Count >= maxCapacity)
-        // {
-        //     Debug.Log("Area dolu! Yeni obje eklenemez.");
-        //     return;
-        // }
+        if (!CanAcceptObject(obj)) return;
+
         storedObjects.Add(obj);
         PlaceInGrid(obj);
     }
-    public bool IsFull() => storedObjects.Count >= maxCapacity;
 
-    public void PlaceInGrid(GameObject obj)
+    private void PlaceInGrid(GameObject obj)
     {
         Vector3 targetPos = CalculateGridPosition();
-        // obj.transform.position = stackPoint.position + new Vector3(-.4f, 0, -.4f);
         obj.transform.rotation = Quaternion.Euler(0, 90, 0);
         obj.SetActive(true);
         obj.transform.SetParent(stackPoint);
 
         obj.transform.DOJump(targetPos, jumpHeight, 1, jumpDuration).SetEase(Ease.OutQuad);
-
         nextGridIndex++;
     }
+
     private Vector3 CalculateGridPosition()
     {
         int index = storedObjects.Count - 1;
@@ -71,28 +81,26 @@ public class Area : MonoBehaviour, IInteractable
         int indexInLayer = index % itemsPerLayer;
 
         int x = indexInLayer % columns;
-        int z = indexInLayer / columns % rows; // rows ile sınırlı
+        int z = indexInLayer / columns % rows;
 
-        Vector3 startPos = stackPoint.position + new Vector3(-.4f, 0, -.4f);
-        Vector3 targetPos = startPos + new Vector3(x * spacingX, currentLayer * layerHeight, z * spacingZ);
-        return targetPos;
-
+        Vector3 startPos = stackPoint.position + new Vector3(-0.4f, 0, -0.4f);
+        return startPos + new Vector3(x * spacingX, currentLayer * layerHeight, z * spacingZ);
     }
+
     public GameObject TakeTopObject()
     {
-        if (storedObjects.Count == 0) return null;
+        if (!HasAnyObject()) return null;
+
         GameObject top = storedObjects[^1];
         storedObjects.RemoveAt(storedObjects.Count - 1);
         top.transform.SetParent(null);
 
-        nextGridIndex = Mathf.Max(nextGridIndex - 1, 0); // indexi azalt
+        nextGridIndex = Mathf.Max(nextGridIndex - 1, 0);
         return top;
     }
+    #endregion
 
-    public bool HasAnyObject() => storedObjects.Count > 0;
-
-    public int ObjectCount => storedObjects.Count;
-
+    #region Interaction
     public void Interact(Transform interactor)
     {
         if (!isPlayerInside) return;
@@ -100,55 +108,23 @@ public class Area : MonoBehaviour, IInteractable
         switch (areaType)
         {
             case AreaType.Input:
-                ReceiveFromPlayer(interactor);
+                ReceiveFromInteractor(interactor);
                 break;
             case AreaType.Output:
-                GiveToPlayer(interactor);
+                StartCoroutine(GiveObjectsWithDelay(interactor, 0.15f));
                 break;
         }
     }
-    // public void AddObjectWithJump(GameObject obj, float jumpHeight = 1f, float duration = 0.5f)
-    // {
-    //     storedObjects.Add(obj);
 
-    //     // Başlangıç pozisyonunu objenin mevcut pozisyonuna al
-    //     Vector3 startPos = obj.transform.position;
-
-    //     // Hedef pozisyonu grid hesaplayarak al
-    //     int itemsPerLayer = columns * rows;
-    //     int currentLayer = ObjectCount / itemsPerLayer;
-    //     int indexInLayer = ObjectCount % itemsPerLayer;
-
-    //     int x = indexInLayer % columns;
-    //     int z = indexInLayer / columns;
-
-    //     Vector3 targetPos = stackPoint.position + new Vector3(x * spacingX, currentLayer * layerHeight, z * spacingZ);
-
-    //     obj.transform.SetParent(stackPoint);
-    //     obj.SetActive(true);
-
-    //     // Jump animasyonu
-    //     obj.transform.DOJump(targetPos, jumpHeight, 1, duration).SetEase(Ease.OutQuad)
-    //         .OnComplete(() =>
-    //         {
-    //             // Son pozisyonu kesin olarak hedefe ayarla
-    //             obj.transform.localPosition = targetPos - stackPoint.position;
-    //         });
-    // }
-    private void ReceiveFromPlayer(Transform interactor)
+    private void ReceiveFromInteractor(Transform interactor)
     {
         var stack = interactor.GetComponent<StackSystem>();
         if (stack == null || stack.Count == 0) return;
 
         GameObject obj = stack.RemoveItem();
-        if (obj == null) return;
+        if (obj == null || !CanAcceptObject(obj)) return;
 
         AddObject(obj);
-    }
-
-    private void GiveToPlayer(Transform interactor)
-    {
-        StartCoroutine(GiveObjectsWithDelay(interactor, 0.15f));
     }
 
     private IEnumerator GiveObjectsWithDelay(Transform interactor, float delay)
@@ -160,7 +136,7 @@ public class Area : MonoBehaviour, IInteractable
             yield break;
         }
 
-        while (HasAnyObject()) // artık isPlayerInside kontrolü yok
+        while (HasAnyObject())
         {
             GameObject topObject = TakeTopObject();
             if (topObject == null) yield break;
@@ -169,7 +145,8 @@ public class Area : MonoBehaviour, IInteractable
             yield return new WaitForSeconds(delay);
         }
     }
-    // Machine çağırabilir
+
+    // Makine çağrabilir
     public void MachineTakeObject()
     {
         if (!HasAnyObject()) return;
@@ -179,5 +156,5 @@ public class Area : MonoBehaviour, IInteractable
 
         OnObjectTakenByMachine?.Invoke(top);
     }
-
+    #endregion
 }

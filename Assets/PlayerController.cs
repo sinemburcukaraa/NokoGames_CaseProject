@@ -15,8 +15,7 @@ public class PlayerController : MonoBehaviour
     private Rigidbody rb;
     private Animator animator;
     private Vector3 moveDirection;
-
-    void Awake()
+    private void Awake()
     {
         rb = GetComponent<Rigidbody>();
         rb.freezeRotation = true;
@@ -24,51 +23,43 @@ public class PlayerController : MonoBehaviour
         animator = GetComponent<Animator>();
     }
 
-    void Update()
+    private void Update()
     {
-        float h = joystick.Horizontal;
-        float v = joystick.Vertical;
-
-        moveDirection = new Vector3(h, 0, v).normalized;
-
-        if (moveDirection != Vector3.zero)
-        {
-            Quaternion targetRotation = Quaternion.LookRotation(moveDirection);
-            transform.rotation = Quaternion.Lerp(
-                transform.rotation,
-                targetRotation,
-                rotationSpeed * Time.deltaTime
-            );
-        }
-
-        bool isMoving = moveDirection.magnitude > 0.1f;
-        animator.SetBool("isRunning", isMoving);
+        HandleInput();
+        HandleRotation();
+        UpdateAnimation();
     }
 
-    void FixedUpdate()
+    private void FixedUpdate()
     {
+        Move();
+    }
+
+    #region Movement
+    private void HandleInput()
+    {
+        moveDirection = new Vector3(joystick.Horizontal, 0, joystick.Vertical).normalized;
+    }
+
+    private void HandleRotation()
+    {
+        if (moveDirection == Vector3.zero) return;
+
+        Quaternion targetRotation = Quaternion.LookRotation(moveDirection);
+        transform.rotation = Quaternion.Lerp(transform.rotation, targetRotation, rotationSpeed * Time.deltaTime);
+    }
+
+    private void Move()
+    {
+        if (moveDirection == Vector3.zero) return;
         rb.MovePosition(rb.position + moveDirection * moveSpeed * Time.fixedDeltaTime);
     }
 
-    // public override void MoveToTarget(Vector3 position)
-    // {
-    //     Vector3 direction = (position - transform.position).normalized;
-    //     rb.MovePosition(
-    //         Vector3.MoveTowards(rb.position, position, moveSpeed * Time.fixedDeltaTime)
-    //     );
-
-    //     if (direction != Vector3.zero)
-    //     {
-    //         Quaternion targetRotation = Quaternion.LookRotation(direction);
-    //         transform.rotation = Quaternion.Lerp(
-    //             transform.rotation,
-    //             targetRotation,
-    //             rotationSpeed * Time.fixedDeltaTime
-    //         );
-    //     }
-
-    //     bool isMoving = Vector3.Distance(transform.position, position) > 0.05f;
-    //     animator.SetBool("isRunning", isMoving);
-    // }
+    private void UpdateAnimation()
+    {
+        bool isMoving = moveDirection.magnitude > 0.1f;
+        animator.SetBool("isRunning", isMoving);
+    }
+    #endregion
 }
 

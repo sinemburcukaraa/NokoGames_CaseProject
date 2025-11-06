@@ -16,18 +16,8 @@ public interface IWorker
     void StartWork();
     void StopWork();
 }
-public interface IProcessorStrategy
+public interface IMachine
 {
-    void Process(GameObject input);
-}
-public abstract class AssetProcessor : MonoBehaviour, IInteractable
-{
-    [SerializeField] protected Transform inputPoint;
-    [SerializeField] protected Transform outputPoint;
-    protected bool isWorking;
-
-    public abstract void Interact(Transform interactor);
-
-    public virtual void StartProcess() => isWorking = true;
-    public virtual void StopProcess() => isWorking = false;
+    void StartProcess();
+    void StopProcess();
 }

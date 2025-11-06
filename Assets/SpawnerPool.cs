@@ -10,11 +10,11 @@ public class SpawnerPool : MonoBehaviour
     [SerializeField] private Transform spawnPoint;
     [SerializeField] private Transform spawnerMachinePoint;
     [SerializeField] private GameObject prefab;
-    [SerializeField] private int initialPoolSize = 10;
+    [SerializeField] private int initialPoolSize = 5;
     [SerializeField] private float spawnDelay = 1f;
+    [SerializeField] private SpawnerStrategy spawnerStrategy;
 
     private ObjectPool<Transform> objectPool;
-    public event Action OnItemScaleCompleted;
 
     private void Awake()
     {
@@ -34,6 +34,7 @@ public class SpawnerPool : MonoBehaviour
             Transform obj = objectPool.Get();
 
             LaunchItem(obj);
+
         }
     }
 
@@ -50,7 +51,7 @@ public class SpawnerPool : MonoBehaviour
                 {
                     obj.localScale = new Vector3(4f, 1.3f, 1.3f);
                     objectPool.ReturnToPool(obj);
-                    OnItemScaleCompleted?.Invoke();
+                    spawnerStrategy?.StartProcess();
 
                 });
             });

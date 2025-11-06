@@ -2,12 +2,12 @@ using System.Collections;
 using System.Collections.Generic;
 using UnityEngine;
 
-public class TrashStrategy : AssetProcessor
+public class TrashStrategy : MonoBehaviour, IInteractable
 {
-    public override void Interact(Transform interactor)
+    public void Interact(Transform interactor)
     {
         Object.Destroy(interactor);
     }
 
-  
+
 }
