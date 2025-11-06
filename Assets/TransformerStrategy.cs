@@ -18,7 +18,7 @@ public class TransformerStrategy : MachineBase
         processedPool = new ObjectPool<Transform>(processedPrefab.transform, poolSize, transform);
     }
 
-    protected override IEnumerator ProcessItem(GameObject inputObject)
+    public override IEnumerator ProcessItem(GameObject inputObject)
     {
         yield return new WaitForSeconds(0.5f);
 

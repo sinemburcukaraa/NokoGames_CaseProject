@@ -1,5 +1,6 @@
 using System.Collections;
 using System.Collections.Generic;
+using DG.Tweening;
 using UnityEngine;
 
 [RequireComponent(typeof(AreaStorage))]
@@ -41,8 +42,28 @@ public class AreaInteractor : MonoBehaviour, IInteractable
             case AreaType.Output:
                 GiveObject(interactor);
                 break;
+
+            case AreaType.Trash:
+                SendToTrash(interactor);
+                break;
         }
     }
+    private void SendToTrash(Transform interactor)
+    {
+        var stack = interactor.GetComponent<StackSystem>();
+        if (stack == null || stack.IsEmpty) return;
+
+        var trashMachine = GetComponentInParent<TrashStrategy>();
+        if (trashMachine == null)
+        {
+            Debug.LogWarning("TrashStrategy component bulunamadı!");
+            return;
+        }
+
+        StartCoroutine(trashMachine.ProcessStack(stack));
+    }
+
+
     private void GiveObject(Transform interactor)
     {
         if (!storage.HasAnyObject) return;
@@ -50,11 +71,9 @@ public class AreaInteractor : MonoBehaviour, IInteractable
         var stackSystem = interactor.GetComponent<StackSystem>();
         if (stackSystem == null) return;
 
-        // 🔒 Eğer stack doluysa hiç işlem yapma
         if (stackSystem.IsFull)
             return;
 
-        // Artık güvenle objeyi alabiliriz
         GameObject topObject = storage.TakeTopObject();
         if (topObject == null) return;
 
@@ -85,4 +104,10 @@ public class AreaInteractor : MonoBehaviour, IInteractable
         storage.AddObject(obj);
     }
 
+}
+public enum AreaType
+{
+    Input,
+    Output,
+    Trash
 }

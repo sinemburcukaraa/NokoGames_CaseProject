@@ -8,10 +8,10 @@ public class StackSystem : MonoBehaviour
     [Header("Stack Settings")]
     public Transform stackParent;
     public float itemHeight = 0.3f;
-    public float jumpPower = 0.3f; // jump yüksekliği
-    public float moveDuration = 0.25f; // animasyon süresi
-    public float swayAmount = 0.03f; // hafif sway
-    [SerializeField] private int maxCapacity = 10; // 🆕 maksimum taşıma limiti
+    public float jumpPower = 0.3f;
+    public float moveDuration = 0.25f;
+    public float swayAmount = 0.03f;
+    [SerializeField] private int maxCapacity = 10;
 
     public List<GameObject> stackedItems = new List<GameObject>();
 
@@ -24,10 +24,10 @@ public class StackSystem : MonoBehaviour
         if (IsFull) return;
 
         stackedItems.Add(item);
-        item.transform.SetParent(stackParent);
+        item.transform.SetParent(stackParent, true);
 
         Vector3 targetPos = Vector3.up * itemHeight * (stackedItems.Count - 1);
-        item.transform.localRotation = Quaternion.identity;
+         item.transform.localRotation = Quaternion.identity;
         item.transform.DOKill();
 
         StartCoroutine(AnimateItem(item, targetPos));

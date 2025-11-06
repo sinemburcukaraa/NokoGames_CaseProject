@@ -29,11 +29,14 @@ public class SpawnerPool : MonoBehaviour
     private AreaStorage targetArea;
 
     private ObjectPool<Transform> objectPool;
+    [SerializeField]
+    private Animator animator;
     private Coroutine spawnCoroutine;
 
     private void Awake()
     {
         objectPool = new ObjectPool<Transform>(prefab.transform, initialPoolSize, transform);
+
     }
 
     private void OnEnable()
@@ -63,6 +66,8 @@ public class SpawnerPool : MonoBehaviour
     {
         if (spawnCoroutine == null)
             spawnCoroutine = StartCoroutine(SpawnRoutine());
+
+        animator.speed = 1f;
     }
 
     private void StopSpawning()
@@ -70,6 +75,7 @@ public class SpawnerPool : MonoBehaviour
         if (spawnCoroutine != null)
         {
             StopCoroutine(spawnCoroutine);
+            DOVirtual.DelayedCall(.5f, () => animator.speed = 0);
             spawnCoroutine = null;
         }
     }

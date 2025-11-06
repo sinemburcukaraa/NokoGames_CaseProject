@@ -66,7 +66,7 @@ public class AICharacterController : CharacterBase
 
                 case WorkerState.Deliver:
                     yield return MoveTo(currentTarget.transform.position);
-                    DeliverToArea(currentTarget);
+                    yield return DeliverToArea(currentTarget);
                     break;
             }
             yield return null;
@@ -75,7 +75,7 @@ public class AICharacterController : CharacterBase
 
     private void DecideNextTask()
     {
-        if (!transformerOutput.IsEmpty && !trashArea.IsFull)
+        if (!transformerOutput.IsEmpty)
         {
             currentTarget = transformerOutput;
             currentState = WorkerState.Collect;
@@ -156,30 +156,42 @@ public class AICharacterController : CharacterBase
         }
     }
 
-    private void DeliverToArea(AreaStorage area)
+    private IEnumerator DeliverToArea(AreaStorage area)
     {
         if (stackSystem.Count == 0)
         {
             currentCarryCount = 0;
             currentState = WorkerState.Idle;
-            return;
+            yield break;
         }
 
-        GameObject obj = stackSystem.RemoveItem();
-        if (obj != null)
+        if (area == trashArea)
         {
-            area.AddObject(obj);
-            currentCarryCount--;
-        }
+            var trashMachine = trashArea.GetComponentInParent<TrashStrategy>();
+            if (trashMachine != null)
+            {
+                yield return StartCoroutine(trashMachine.ProcessStack(stackSystem));
+            }
 
-        if (stackSystem.Count > 0)
-        {
-            currentState = WorkerState.Deliver;
-        }
-        else
-        {
             currentCarryCount = 0;
             currentState = WorkerState.Idle;
+            yield break;
         }
+
+        while (stackSystem.Count > 0 && !area.IsFull)
+        {
+            GameObject obj = stackSystem.RemoveItem();
+            if (obj != null)
+            {
+                area.AddObject(obj);
+                currentCarryCount--;
+                yield return new WaitForSeconds(0.1f);
+            }
+        }
+
+        currentCarryCount = 0;
+        currentState = WorkerState.Idle;
     }
+
+
 }

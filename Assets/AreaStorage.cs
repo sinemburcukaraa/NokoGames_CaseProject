@@ -7,43 +7,30 @@ using UnityEngine;
 public class AreaStorage : MonoBehaviour
 {
     [Header("Grid Settings")]
-    [SerializeField]
-    private Transform stackPoint;
-
-    [SerializeField]
-    private int columns = 2;
-
-    [SerializeField]
-    private int rows = 2;
-
-    [SerializeField]
-    private float spacingX = 0.5f;
-
-    [SerializeField]
-    private float spacingZ = 0.5f;
-
-    [SerializeField]
-    private float layerHeight = 0.3f;
+    [SerializeField] private Transform stackPoint;
+    [SerializeField] private int columns = 2;
+    [SerializeField] private int rows = 2;
+    [SerializeField] private float spacingX = 0.5f;
+    [SerializeField] private float spacingZ = 0.5f;
+    [SerializeField] private float layerHeight = 0.3f;
 
     [Header("Animation Settings")]
-    [SerializeField]
-    private float jumpHeight = 1f;
-
-    [SerializeField]
-    private float jumpDuration = 0.5f;
+    [SerializeField] private float jumpHeight = 1f;
+    [SerializeField] private float jumpDuration = 0.5f;
 
     [Header("Capacity")]
     public int maxCapacity = 20;
 
-    [SerializeField]
-    private List<GameObject> storedObjects = new();
+    [SerializeField] private List<GameObject> storedObjects = new();
 
+    [Header("Accepted Resource Types")]
     public ResourceType acceptedType = ResourceType.None;
 
     public event Action OnAreaBecameAvailable;
     public event Action OnAreaFilled;
     public event Action OnObjectAdded;
     public event Action OnObjectRemoved;
+
     public bool HasAnyObject => storedObjects.Count > 0;
     public bool IsFull => storedObjects.Count >= maxCapacity;
     public int ObjectCount => storedObjects.Count;
@@ -51,21 +38,17 @@ public class AreaStorage : MonoBehaviour
 
     public bool CanAcceptObject(GameObject obj)
     {
-        var resource = obj.GetComponent<ResourceItem>();
-        return !IsFull && resource != null && resource.Type == acceptedType;
+        if (IsFull) return false;
 
+        var resource = obj.GetComponent<ResourceItem>();
+        if (resource == null) return false;
+
+        return acceptedType.HasFlag(ResourceType.All) || acceptedType.HasFlag(resource.Type);
     }
 
     public void AddObject(GameObject obj)
     {
         if (!CanAcceptObject(obj))
-            return;
-
-        var resource = obj.GetComponent<ResourceItem>();
-        if (resource == null)
-            return;
-
-        if (resource.Type != acceptedType)
             return;
 
         storedObjects.Add(obj);
@@ -82,7 +65,6 @@ public class AreaStorage : MonoBehaviour
         obj.transform.rotation = Quaternion.Euler(0, 90, 0);
         obj.SetActive(true);
         obj.transform.SetParent(stackPoint);
-
         obj.transform.DOJump(targetPos, jumpHeight, 1, jumpDuration).SetEase(Ease.OutQuad);
     }
 
@@ -106,7 +88,6 @@ public class AreaStorage : MonoBehaviour
             return null;
 
         GameObject top = storedObjects[^1];
-
         if (top == null || top.transform == null)
             return null;
 
@@ -115,7 +96,6 @@ public class AreaStorage : MonoBehaviour
 
         if (!IsFull)
             OnAreaBecameAvailable?.Invoke();
-
         OnObjectRemoved?.Invoke();
 
         return top;

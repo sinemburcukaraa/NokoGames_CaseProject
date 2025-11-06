@@ -41,7 +41,7 @@ public class SpawnerStrategy : MachineBase
         isProcessing = false;
     }
 
-    protected override IEnumerator ProcessItem(GameObject inputObject)
+    public override IEnumerator ProcessItem(GameObject inputObject)
     {
         yield break;
     }

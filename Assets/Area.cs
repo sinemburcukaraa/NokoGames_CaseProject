@@ -3,11 +3,7 @@ using System.Collections.Generic;
 using DG.Tweening;
 using UnityEngine;
 
-public enum AreaType
-{
-    Input,
-    Output,
-}
+
 
 [RequireComponent(typeof(Collider))]
 public class Area : MonoBehaviour, IInteractable
@@ -179,7 +175,6 @@ public class Area : MonoBehaviour, IInteractable
         }
     }
 
-    // Makine çağrabilir
     public void MachineTakeObject()
     {
         if (!HasAnyObject())

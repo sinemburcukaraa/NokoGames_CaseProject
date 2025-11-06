@@ -1,5 +1,6 @@
 using System.Collections;
 using System.Collections.Generic;
+using DG.Tweening;
 using UnityEngine;
 
 public class TrashStrategy : MachineBase
@@ -9,6 +10,7 @@ public class TrashStrategy : MachineBase
     [SerializeField] private ParticleSystem destroyEffect;
     [SerializeField] private AudioClip destroySound;
     [SerializeField] private bool usePooling = true;
+    [SerializeField] private float jumpPower = 1f;
 
     private AudioSource audioSource;
 
@@ -18,46 +20,64 @@ public class TrashStrategy : MachineBase
         audioSource = GetComponent<AudioSource>();
     }
 
-    protected override IEnumerator ProcessItem(GameObject inputObject)
+    public override IEnumerator ProcessItem(GameObject inputObject)
     {
         if (inputObject == null)
             yield break;
 
-        // Küçük bir gecikme (yok etme animasyonu/efekti için)
         yield return new WaitForSeconds(destroyDelay);
 
         Vector3 destroyPos = processingPoint != null ? processingPoint.position : inputObject.transform.position;
 
-        // 🎇 Efekt ve ses
         if (destroyEffect != null)
             Instantiate(destroyEffect, destroyPos, Quaternion.identity);
 
         if (audioSource != null && destroySound != null)
             audioSource.PlayOneShot(destroySound);
 
-        // ♻️ Pool veya Destroy işlemi
         ReturnToPoolIfPossible(inputObject);
-
         yield return null;
     }
 
+    public IEnumerator ProcessStack(StackSystem stack)
+    {
+        if (stack == null || stack.IsEmpty)
+            yield break;
+
+        while (!stack.IsEmpty)
+        {
+            GameObject obj = stack.RemoveItem();
+            if (obj == null) yield break;
+
+            obj.transform.SetParent(null);
+            obj.SetActive(true);
+
+            // Jump animasyonu
+            yield return obj.transform
+                .DOJump(processingPoint.position, jumpPower, 1, jumpDuration)
+                .SetEase(Ease.OutQuad)
+                .WaitForCompletion();
+
+            // Destroy efektini paralel başlat (beklemeden)
+            StartCoroutine(ProcessItem(obj));
+
+            // Obje arası çok kısa gecikme
+            yield return new WaitForSeconds(0.1f);
+        }
+    }
+
+
     private void ReturnToPoolIfPossible(GameObject obj)
     {
-        // Objede bir ResourceItem var mı?
         var resourceItem = obj.GetComponent<ResourceItem>();
         if (resourceItem != null && usePooling)
         {
-            // Eğer bu obje spawner tarafından oluşturulduysa, genellikle
-            // onun içinde bir ObjectPool referansı tutulur.
             if (resourceItem.originPool != null)
             {
-                // Pool’a geri gönder
                 resourceItem.originPool.ReturnToPool(resourceItem.transform);
                 return;
             }
         }
-
-        // Eğer hiçbir pool referansı yoksa, normal şekilde yok et
         Destroy(obj);
     }
 }

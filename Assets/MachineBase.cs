@@ -88,7 +88,7 @@ public abstract class MachineBase : MonoBehaviour, IMachine
         obj.SetActive(false);
     }
 
-    protected abstract IEnumerator ProcessItem(GameObject inputObject);
+    public abstract IEnumerator ProcessItem(GameObject inputObject);
 
     public virtual void StartProcess() => TryStartProcessing();
 

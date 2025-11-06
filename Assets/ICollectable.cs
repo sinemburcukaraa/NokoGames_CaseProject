@@ -21,3 +21,7 @@ public interface IMachine
     void StartProcess();
     void StopProcess();
 }
+public interface IPoolable
+{
+    void ReturnToPool();
+}
