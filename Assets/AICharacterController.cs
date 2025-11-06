@@ -1,66 +1,185 @@
 using System.Collections;
 using System.Collections.Generic;
 using UnityEngine;
+
 // [RequireComponent(typeof(StackSystem))]
-public class AICharacterController : MonoBehaviour// CharacterBase, IWorker
+public class AICharacterController : CharacterBase
 {
-    // [Header("Movement Settings")]
-    // [SerializeField] private float moveSpeed = 3f;
-    // [SerializeField] private float rotationSpeed = 5f;
+    [SerializeField]
+    private float rotationSpeed = 5f;
 
-    // [Header("Target Areas")]
-    // [SerializeField] private List<Area> targetAreas;
+    [SerializeField]
+    private float moveSpeed = 3f;
 
-    // private StackSystem stackSystem;
-    // private Area currentTarget;
-    // private bool isInteracting = false;
+    [SerializeField]
+    private StackSystem stackSystem;
 
-    // private void Awake()
-    // {
-    //     stackSystem = GetComponent<StackSystem>();
-    // }
+    [SerializeField]
+    private AreaStorage spawnerOutput;
 
-    // private void Update()
-    // {
-    //     if (isInteracting || targetAreas.Count == 0) return;
+    [SerializeField]
+    private AreaStorage transformerInput;
 
-    //     if (currentTarget == null || !IsTargetValid(currentTarget))
-    //         ChooseNextTarget();
+    [SerializeField]
+    private AreaStorage transformerOutput;
 
-    //     MoveTowardsTarget();
-    // }
+    [SerializeField]
+    private AreaStorage trashArea;
 
-    // private bool IsTargetValid(Area area)
-    // {
-    //     return (area.IsInput && stackSystem.Count > 0) ||
-    //            (area.IsOutput && area.HasAnyObject());
-    // }
+    [SerializeField]
+    private Animator AICharacterAnimator;
 
-    // private void ChooseNextTarget()
-    // {
-    //     currentTarget = targetAreas[Random.Range(0, targetAreas.Count)];
-    // }
+    [SerializeField]
+    private int maxCarryCount = 5;
+    private int currentCarryCount = 0;
 
-    // private void MoveTowardsTarget()
-    // {
-    //     Vector3 direction = (currentTarget.transform.position - transform.position).normalized;
-    //     transform.rotation = Quaternion.Slerp(transform.rotation, Quaternion.LookRotation(direction), rotationSpeed * Time.deltaTime);
-    //     transform.position += direction * moveSpeed * Time.deltaTime;
+    private enum WorkerState
+    {
+        Idle,
+        Collect,
+        Deliver,
+    }
 
-    //     if (Vector3.Distance(transform.position, currentTarget.transform.position) < 1f)
-    //     {
-    //         StartCoroutine(InteractWithArea(currentTarget));
-    //     }
-    // }
+    private WorkerState currentState = WorkerState.Idle;
 
-    // private IEnumerator InteractWithArea(Area area)
-    // {
-    //     isInteracting = true;
+    private AreaStorage currentTarget;
 
-    //     area.Interact(transform); // AI stack ve area kontrolünü kendi içinde yapmalı
+    private void Start()
+    {
+        StartCoroutine(WorkerLoop());
+    }
 
-    //     yield return new WaitForSeconds(0.5f);
+    private IEnumerator WorkerLoop()
+    {
+        while (true)
+        {
+            switch (currentState)
+            {
+                case WorkerState.Idle:
+                    DecideNextTask();
+                    break;
 
-    //     isInteracting = false;
-    // }
+                case WorkerState.Collect:
+                    yield return MoveTo(currentTarget.transform.position);
+                    CollectFromArea(currentTarget);
+                    break;
+
+                case WorkerState.Deliver:
+                    yield return MoveTo(currentTarget.transform.position);
+                    DeliverToArea(currentTarget);
+                    break;
+            }
+            yield return null;
+        }
+    }
+
+    private void DecideNextTask()
+    {
+        if (!transformerOutput.IsEmpty && !trashArea.IsFull)
+        {
+            currentTarget = transformerOutput;
+            currentState = WorkerState.Collect;
+        }
+        else if (!spawnerOutput.IsEmpty && !transformerInput.IsFull)
+        {
+            currentTarget = spawnerOutput;
+            currentState = WorkerState.Collect;
+        }
+        else
+        {
+            currentState = WorkerState.Idle;
+        }
+    }
+
+    private IEnumerator MoveTo(Vector3 targetPos)
+    {
+        AICharacterAnimator.SetBool("isRunning", true);
+
+        while (Vector3.Distance(transform.position, targetPos) > 0.1f)
+        {
+            Vector3 direction = (targetPos - transform.position).normalized;
+            direction.y = 0f;
+
+            if (direction.sqrMagnitude > 0.001f)
+            {
+                Quaternion targetRotation = Quaternion.LookRotation(direction);
+                transform.rotation = Quaternion.Slerp(
+                    transform.rotation,
+                    targetRotation,
+                    rotationSpeed * Time.deltaTime
+                );
+            }
+
+            transform.position = Vector3.MoveTowards(
+                transform.position,
+                targetPos,
+                moveSpeed * Time.deltaTime
+            );
+
+            yield return null;
+        }
+
+        AICharacterAnimator.SetBool("isRunning", false);
+    }
+
+    private void CollectFromArea(AreaStorage area)
+    {
+        if (stackSystem.IsFull || currentCarryCount >= maxCarryCount)
+        {
+            currentState = WorkerState.Deliver;
+            return;
+        }
+
+        GameObject obj = area.TakeTopObject();
+        if (obj != null)
+        {
+            stackSystem.AddItem(obj);
+            currentCarryCount++;
+
+            if (!stackSystem.IsFull && currentCarryCount < maxCarryCount && !area.IsEmpty)
+            {
+                currentState = WorkerState.Collect;
+            }
+            else
+            {
+                if (area == spawnerOutput)
+                    currentTarget = transformerInput;
+                else if (area == transformerOutput)
+                    currentTarget = trashArea;
+
+                currentState = WorkerState.Deliver;
+            }
+        }
+        else
+        {
+            currentState = WorkerState.Idle;
+        }
+    }
+
+    private void DeliverToArea(AreaStorage area)
+    {
+        if (stackSystem.Count == 0)
+        {
+            currentCarryCount = 0;
+            currentState = WorkerState.Idle;
+            return;
+        }
+
+        GameObject obj = stackSystem.RemoveItem();
+        if (obj != null)
+        {
+            area.AddObject(obj);
+            currentCarryCount--;
+        }
+
+        if (stackSystem.Count > 0)
+        {
+            currentState = WorkerState.Deliver;
+        }
+        else
+        {
+            currentCarryCount = 0;
+            currentState = WorkerState.Idle;
+        }
+    }
 }

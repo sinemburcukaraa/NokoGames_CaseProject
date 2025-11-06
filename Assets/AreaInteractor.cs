@@ -25,12 +25,6 @@ public class AreaInteractor : MonoBehaviour, IInteractable
         if (interactorsInside.Contains(other.transform))
         {
             interactorsInside.Remove(other.transform);
-
-            if (activeCoroutines.TryGetValue(other.transform, out Coroutine routine))
-            {
-                if (routine != null) StopCoroutine(routine);
-                activeCoroutines.Remove(other.transform);
-            }
         }
     }
 
@@ -43,52 +37,51 @@ public class AreaInteractor : MonoBehaviour, IInteractable
             case AreaType.Input:
                 ReceiveFromInteractor(interactor);
                 break;
+
             case AreaType.Output:
-                if (!activeCoroutines.ContainsKey(interactor))
-                {
-                    Coroutine c = StartCoroutine(GiveObjectsContinuously(interactor, 0.15f));
-                    activeCoroutines.Add(interactor, c);
-                }
+                GiveObject(interactor);
                 break;
         }
     }
-
-    private IEnumerator GiveObjectsContinuously(Transform interactor, float delay)
+    private void GiveObject(Transform interactor)
     {
-        if (!storage.CanAcceptObject(interactor.gameObject)) yield break; 
-    
+        if (!storage.HasAnyObject) return;
+
         var stackSystem = interactor.GetComponent<StackSystem>();
-        if (stackSystem == null) yield break;
+        if (stackSystem == null) return;
 
-        while (interactorsInside.Contains(interactor)) 
-        {
-            while (storage.HasAnyObject)
-            {
-                GameObject topObject = storage.TakeTopObject();
-                if (topObject == null) break;
+        // 🔒 Eğer stack doluysa hiç işlem yapma
+        if (stackSystem.IsFull)
+            return;
 
-                stackSystem.AddItem(topObject);
-                yield return new WaitForSeconds(delay);
-            }
-            yield return null; // Yeni objeler için bekle
-        }
+        // Artık güvenle objeyi alabiliriz
+        GameObject topObject = storage.TakeTopObject();
+        if (topObject == null) return;
 
-        activeCoroutines.Remove(interactor);
+        stackSystem.AddItem(topObject);
     }
+
     private void ReceiveFromInteractor(Transform interactor)
     {
         var stack = interactor.GetComponent<StackSystem>();
         if (stack == null || stack.Count == 0) return;
 
-        GameObject obj = stack.RemoveItem();
+        if (storage.IsFull)
+            return;
+
+        GameObject obj = stack.PeekItem();
         if (obj == null) return;
 
-        if (!storage.CanAcceptObject(obj))
+        var resourceItem = obj.GetComponent<ResourceItem>();
+        if (resourceItem == null)
+            return;
+
+        if (!storage.CanAcceptObject(resourceItem.gameObject))
         {
-            stack.AddItem(obj);
             return;
         }
 
+        obj = stack.RemoveItem();
         storage.AddObject(obj);
     }
 

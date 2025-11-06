@@ -9,6 +9,7 @@ TagManager:
   - ScreenCamera
   - cockpit_capitalLaser
   - Product
+  - AI
   layers:
   - Default
   - TransparentFX

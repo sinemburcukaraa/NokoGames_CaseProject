@@ -1,22 +1,28 @@
 using System.Collections;
 using System.Collections.Generic;
 using DG.Tweening;
-using UnityEditor.Callbacks;
 using UnityEngine;
 
 public class StackSystem : MonoBehaviour
 {
+    [Header("Stack Settings")]
     public Transform stackParent;
     public float itemHeight = 0.3f;
     public float jumpPower = 0.3f; // jump yüksekliği
     public float moveDuration = 0.25f; // animasyon süresi
     public float swayAmount = 0.03f; // hafif sway
+    [SerializeField] private int maxCapacity = 10; // 🆕 maksimum taşıma limiti
 
-    private List<GameObject> stackedItems = new List<GameObject>();
-    private Queue<GameObject> pendingItems = new Queue<GameObject>();
+    public List<GameObject> stackedItems = new List<GameObject>();
+
+    public int Count => stackedItems.Count;
+    public bool IsFull => stackedItems.Count >= maxCapacity;
+    public bool IsEmpty => stackedItems.Count == 0;
 
     public void AddItem(GameObject item)
     {
+        if (IsFull) return;
+
         stackedItems.Add(item);
         item.transform.SetParent(stackParent);
 
@@ -24,7 +30,6 @@ public class StackSystem : MonoBehaviour
         item.transform.localRotation = Quaternion.identity;
         item.transform.DOKill();
 
-        // Animasyonla stacke yerleştir
         StartCoroutine(AnimateItem(item, targetPos));
     }
 
@@ -39,15 +44,10 @@ public class StackSystem : MonoBehaviour
 
     public GameObject RemoveItem()
     {
-        if (stackedItems.Count == 0) return null;
+        if (IsEmpty) return null;
 
         GameObject item = stackedItems[^1];
         stackedItems.RemoveAt(stackedItems.Count - 1);
-
-        // Coroutine varsa durdur
-        cube cubeComp = item.GetComponent<cube>();
-        // if (cubeComp != null)
-        //     cubeComp.StopFollowing();
 
         item.transform.DOKill();
         item.transform.SetParent(null);
@@ -55,5 +55,9 @@ public class StackSystem : MonoBehaviour
         return item;
     }
 
-    public int Count => stackedItems.Count;
+    public GameObject PeekItem()
+    {
+        if (IsEmpty) return null;
+        return stackedItems[^1];
+    }
 }

@@ -9,6 +9,7 @@ public class PlayerInteraction : MonoBehaviour
         if (other.TryGetComponent<IInteractable>(out var interactable))
         {
             interactable.Interact(transform);
+            print("interact ");
             // GameEvents.Instance.TriggerInteract(transform, interactable);
         }
     }

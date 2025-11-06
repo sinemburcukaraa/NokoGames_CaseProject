@@ -1,47 +1,48 @@
-using System;
 using System.Collections;
-using System.Collections.Generic;
-using DG.Tweening;
 using UnityEngine;
 
-public class SpawnerStrategy : MonoBehaviour, IMachine
+public class SpawnerStrategy : MachineBase
 {
     [Header("Spawner Settings")]
-    [SerializeField] private Transform spawnPoint;
-    [SerializeField] private GameObject prefab;
-    [SerializeField] private int initialPoolSize = 10;
+    [SerializeField]
+    private Transform spawnPoint;
 
-    [Header("Output Area")]
-    [SerializeField] private AreaStorage areaStorage;
+    [SerializeField]
+    private GameObject prefab;
+
+    [SerializeField]
+    private int initialPoolSize = 10;
 
     private ObjectPool<Transform> pool;
-    private bool isProcessing = false;
 
-    private void Awake()
+    protected override void Awake()
     {
+        base.Awake();
         pool = new ObjectPool<Transform>(prefab.transform, initialPoolSize, transform);
     }
 
-    public void StartProcess()
+    public override void StartProcess()
     {
-        if (isProcessing) return;
+        if (isProcessing || outputArea.IsFull)
+            return;
         isProcessing = true;
 
-        for (int i = 0; i < 2; i++)
+        int spawnCount = Mathf.Min(2, outputArea.maxCapacity - outputArea.ObjectCount);
+        for (int i = 0; i < spawnCount; i++)
         {
             Transform obj = pool.Get();
             obj.position = spawnPoint.position + new Vector3(i * 0.3f, 0, 0);
             obj.rotation = Quaternion.Euler(0, 90, 0);
             obj.gameObject.SetActive(true);
 
-            areaStorage.AddObject(obj.gameObject);
+            outputArea.AddObject(obj.gameObject);
         }
 
         isProcessing = false;
     }
 
-    public void StopProcess()
+    protected override IEnumerator ProcessItem(GameObject inputObject)
     {
-        isProcessing = false;
+        yield break;
     }
 }

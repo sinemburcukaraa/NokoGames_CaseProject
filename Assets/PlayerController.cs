@@ -1,6 +1,7 @@
 using System.Collections;
 using System.Collections.Generic;
 using UnityEngine;
+
 [RequireComponent(typeof(Rigidbody))]
 [RequireComponent(typeof(Animator))]
 public class PlayerController : MonoBehaviour
@@ -15,6 +16,7 @@ public class PlayerController : MonoBehaviour
     private Rigidbody rb;
     private Animator animator;
     private Vector3 moveDirection;
+
     private void Awake()
     {
         rb = GetComponent<Rigidbody>();
@@ -43,15 +45,21 @@ public class PlayerController : MonoBehaviour
 
     private void HandleRotation()
     {
-        if (moveDirection == Vector3.zero) return;
+        if (moveDirection == Vector3.zero)
+            return;
 
         Quaternion targetRotation = Quaternion.LookRotation(moveDirection);
-        transform.rotation = Quaternion.Lerp(transform.rotation, targetRotation, rotationSpeed * Time.deltaTime);
+        transform.rotation = Quaternion.Lerp(
+            transform.rotation,
+            targetRotation,
+            rotationSpeed * Time.deltaTime
+        );
     }
 
     private void Move()
     {
-        if (moveDirection == Vector3.zero) return;
+        if (moveDirection == Vector3.zero)
+            return;
         rb.MovePosition(rb.position + moveDirection * moveSpeed * Time.fixedDeltaTime);
     }
 
@@ -62,4 +70,3 @@ public class PlayerController : MonoBehaviour
     }
     #endregion
 }
-
