@@ -10,7 +10,6 @@ public class UIManager : MonoBehaviour
     public float displayTime = 2f;
 
     private Coroutine currentCoroutine;
-    public Button hireButton;
     void Awake()
     {
         if (Instance == null)
