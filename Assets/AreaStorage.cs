@@ -72,7 +72,10 @@ public class AreaStorage : MonoBehaviour
 
         OnObjectAdded?.Invoke();
         if (IsFull)
+        {
+            UIManager.Instance.ShowNotification("Storage is Full!!");
             OnAreaFilled?.Invoke();
+        }
 
         isProcessing = false;
     }

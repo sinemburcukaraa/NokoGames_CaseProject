@@ -22,6 +22,7 @@ public class StackSystem : MonoBehaviour
 
     public void AddItem(GameObject item)
     {
+
         if (IsFull || isProcessing) return;
 
         stackedItems.Add(item);

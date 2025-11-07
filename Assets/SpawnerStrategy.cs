@@ -42,7 +42,6 @@ public class SpawnerStrategy : MachineBase
             obj.rotation = Quaternion.Euler(0, 90, 0);
             obj.gameObject.SetActive(true);
 
-            // AreaStorage'ın animasyon kilidini bekle
             outputArea.AddObject(obj.gameObject);
             yield return new WaitUntil(() => !outputArea.isProcessing);
         }

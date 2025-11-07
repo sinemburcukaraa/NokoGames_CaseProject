@@ -11,7 +11,6 @@ public class AreaInteractor : MonoBehaviour, IInteractable
     private HashSet<Transform> interactorsInside = new();
     private Dictionary<Transform, bool> interactorBusy = new();
     private Dictionary<Transform, Coroutine> activeCoroutines = new();
-
     private void Awake() => storage = GetComponent<AreaStorage>();
 
     private void OnTriggerEnter(Collider other)
@@ -29,7 +28,6 @@ public class AreaInteractor : MonoBehaviour, IInteractable
         {
             interactorsInside.Remove(other.transform);
 
-            // Eğer trash coroutine çalışıyorsa durdur
             if (activeCoroutines.TryGetValue(other.transform, out Coroutine running))
             {
                 StopCoroutine(running);
@@ -66,8 +64,8 @@ public class AreaInteractor : MonoBehaviour, IInteractable
                 break;
         }
 
-        // Stack animasyonu bitene kadar bekle (input/output)
         var stack = interactor.GetComponent<StackSystem>();
+
         if (stack != null)
             yield return new WaitUntil(() => !stack.isProcessing);
 
@@ -77,13 +75,14 @@ public class AreaInteractor : MonoBehaviour, IInteractable
     private void GiveObject(Transform interactor)
     {
         if (!storage.HasAnyObject) return;
-
         var stackSystem = interactor.GetComponent<StackSystem>();
+        if (stackSystem.IsFull)
+            UIManager.Instance.ShowNotification("Your carrying capacity is full!");
+
         if (stackSystem == null || stackSystem.IsFull) return;
 
         GameObject topObject = storage.TakeTopObject();
         if (topObject == null) return;
-
         stackSystem.AddItem(topObject);
     }
 
@@ -114,7 +113,6 @@ public class AreaInteractor : MonoBehaviour, IInteractable
         if (trashMachine == null)
             yield break;
 
-        // Coroutine’yi kaydet
         Coroutine running = StartCoroutine(trashMachine.ProcessStack(stack));
         activeCoroutines[interactor] = running;
 
