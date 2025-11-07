@@ -9,6 +9,7 @@ public class AreaInteractor : MonoBehaviour, IInteractable
     [SerializeField] private AreaType areaType = AreaType.Output;
     private AreaStorage storage;
     private HashSet<Transform> interactorsInside = new();
+    private Dictionary<Transform, bool> interactorBusy = new();
     private Dictionary<Transform, Coroutine> activeCoroutines = new();
 
     private void Awake() => storage = GetComponent<AreaStorage>();
@@ -18,6 +19,7 @@ public class AreaInteractor : MonoBehaviour, IInteractable
         if (other.CompareTag("Player") || other.CompareTag("AI"))
         {
             interactorsInside.Add(other.transform);
+            interactorBusy[other.transform] = false;
         }
     }
 
@@ -26,13 +28,29 @@ public class AreaInteractor : MonoBehaviour, IInteractable
         if (interactorsInside.Contains(other.transform))
         {
             interactorsInside.Remove(other.transform);
+
+            // Eğer trash coroutine çalışıyorsa durdur
+            if (activeCoroutines.TryGetValue(other.transform, out Coroutine running))
+            {
+                StopCoroutine(running);
+                activeCoroutines.Remove(other.transform);
+            }
+
+            interactorBusy.Remove(other.transform);
         }
     }
 
     public void Interact(Transform interactor)
     {
         if (!interactorsInside.Contains(interactor)) return;
+        if (interactorBusy[interactor]) return;
 
+        interactorBusy[interactor] = true;
+        StartCoroutine(HandleInteraction(interactor));
+    }
+
+    private IEnumerator HandleInteraction(Transform interactor)
+    {
         switch (areaType)
         {
             case AreaType.Input:
@@ -44,35 +62,24 @@ public class AreaInteractor : MonoBehaviour, IInteractable
                 break;
 
             case AreaType.Trash:
-                SendToTrash(interactor);
+                yield return StartCoroutine(SendToTrash(interactor));
                 break;
         }
-    }
-    private void SendToTrash(Transform interactor)
-    {
+
+        // Stack animasyonu bitene kadar bekle (input/output)
         var stack = interactor.GetComponent<StackSystem>();
-        if (stack == null || stack.IsEmpty) return;
+        if (stack != null)
+            yield return new WaitUntil(() => !stack.isProcessing);
 
-        var trashMachine = GetComponentInParent<TrashStrategy>();
-        if (trashMachine == null)
-        {
-            Debug.LogWarning("TrashStrategy component bulunamadı!");
-            return;
-        }
-
-        StartCoroutine(trashMachine.ProcessStack(stack));
+        interactorBusy[interactor] = false;
     }
-
 
     private void GiveObject(Transform interactor)
     {
         if (!storage.HasAnyObject) return;
 
         var stackSystem = interactor.GetComponent<StackSystem>();
-        if (stackSystem == null) return;
-
-        if (stackSystem.IsFull)
-            return;
+        if (stackSystem == null || stackSystem.IsFull) return;
 
         GameObject topObject = storage.TakeTopObject();
         if (topObject == null) return;
@@ -83,28 +90,41 @@ public class AreaInteractor : MonoBehaviour, IInteractable
     private void ReceiveFromInteractor(Transform interactor)
     {
         var stack = interactor.GetComponent<StackSystem>();
-        if (stack == null || stack.Count == 0) return;
-
-        if (storage.IsFull)
-            return;
+        if (stack == null || stack.IsEmpty) return;
+        if (storage.IsFull || storage.isProcessing) return;
 
         GameObject obj = stack.PeekItem();
         if (obj == null) return;
 
         var resourceItem = obj.GetComponent<ResourceItem>();
-        if (resourceItem == null)
-            return;
-
-        if (!storage.CanAcceptObject(resourceItem.gameObject))
-        {
-            return;
-        }
+        if (resourceItem == null) return;
+        if (!storage.CanAcceptObject(resourceItem.gameObject)) return;
 
         obj = stack.RemoveItem();
         storage.AddObject(obj);
     }
 
+    private IEnumerator SendToTrash(Transform interactor)
+    {
+        var stack = interactor.GetComponent<StackSystem>();
+        if (stack == null || stack.IsEmpty)
+            yield break;
+
+        var trashMachine = GetComponentInParent<TrashStrategy>();
+        if (trashMachine == null)
+            yield break;
+
+        // Coroutine’yi kaydet
+        Coroutine running = StartCoroutine(trashMachine.ProcessStack(stack));
+        activeCoroutines[interactor] = running;
+
+        yield return running;
+
+        activeCoroutines.Remove(interactor);
+        interactorBusy[interactor] = false;
+    }
 }
+
 public enum AreaType
 {
     Input,

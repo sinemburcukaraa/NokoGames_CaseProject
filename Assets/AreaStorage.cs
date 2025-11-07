@@ -45,18 +45,36 @@ public class AreaStorage : MonoBehaviour
 
         return acceptedType.HasFlag(ResourceType.All) || acceptedType.HasFlag(resource.Type);
     }
+    public bool isProcessing = false;
 
     public void AddObject(GameObject obj)
     {
-        if (!CanAcceptObject(obj))
+        if (!CanAcceptObject(obj) || isProcessing)
             return;
 
+        StartCoroutine(ProcessObject(obj));
+    }
+
+    private IEnumerator ProcessObject(GameObject obj)
+    {
+        isProcessing = true;
+
         storedObjects.Add(obj);
-        PlaceInGrid(obj);
+
+        Vector3 targetPos = CalculateGridPosition();
+        obj.transform.rotation = Quaternion.Euler(0, 90, 0);
+        obj.SetActive(true);
+        obj.transform.SetParent(stackPoint);
+
+        yield return obj.transform.DOJump(targetPos, jumpHeight, 1, jumpDuration)
+            .SetEase(Ease.OutQuad)
+            .WaitForCompletion();
 
         OnObjectAdded?.Invoke();
         if (IsFull)
             OnAreaFilled?.Invoke();
+
+        isProcessing = false;
     }
 
     private void PlaceInGrid(GameObject obj)

@@ -25,9 +25,16 @@ public class SpawnerStrategy : MachineBase
     {
         if (isProcessing || outputArea.IsFull)
             return;
+
+        StartCoroutine(SpawnObjectsCoroutine());
+    }
+
+    private IEnumerator SpawnObjectsCoroutine()
+    {
         isProcessing = true;
 
         int spawnCount = Mathf.Min(2, outputArea.maxCapacity - outputArea.ObjectCount);
+
         for (int i = 0; i < spawnCount; i++)
         {
             Transform obj = pool.Get();
@@ -35,11 +42,14 @@ public class SpawnerStrategy : MachineBase
             obj.rotation = Quaternion.Euler(0, 90, 0);
             obj.gameObject.SetActive(true);
 
+            // AreaStorage'ın animasyon kilidini bekle
             outputArea.AddObject(obj.gameObject);
+            yield return new WaitUntil(() => !outputArea.isProcessing);
         }
 
         isProcessing = false;
     }
+
 
     public override IEnumerator ProcessItem(GameObject inputObject)
     {

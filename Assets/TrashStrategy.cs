@@ -1,16 +1,15 @@
 using System.Collections;
-using System.Collections.Generic;
 using DG.Tweening;
 using UnityEngine;
 
 public class TrashStrategy : MachineBase
 {
     [Header("Trash Machine Settings")]
-    [SerializeField] private float destroyDelay = 0.4f;
+    [SerializeField] private float destroyDelay = 0.2f; // Daha hızlı
     [SerializeField] private ParticleSystem destroyEffect;
     [SerializeField] private AudioClip destroySound;
     [SerializeField] private bool usePooling = true;
-    [SerializeField] private float jumpPower = 1f;
+    [SerializeField] private float jumpPower = 0.5f; // Daha hızlı ve düşük
 
     private AudioSource audioSource;
 
@@ -36,7 +35,6 @@ public class TrashStrategy : MachineBase
             audioSource.PlayOneShot(destroySound);
 
         ReturnToPoolIfPossible(inputObject);
-        yield return null;
     }
 
     public IEnumerator ProcessStack(StackSystem stack)
@@ -46,26 +44,25 @@ public class TrashStrategy : MachineBase
 
         while (!stack.IsEmpty)
         {
+
             GameObject obj = stack.RemoveItem();
             if (obj == null) yield break;
 
             obj.transform.SetParent(null);
             obj.SetActive(true);
 
-            // Jump animasyonu
+            // Jump animasyonunu hızlı yap
             yield return obj.transform
                 .DOJump(processingPoint.position, jumpPower, 1, jumpDuration)
                 .SetEase(Ease.OutQuad)
                 .WaitForCompletion();
 
-            // Destroy efektini paralel başlat (beklemeden)
-            StartCoroutine(ProcessItem(obj));
+            yield return ProcessItem(obj);
 
-            // Obje arası çok kısa gecikme
-            yield return new WaitForSeconds(0.1f);
+            // Opsiyonel kısa delay ile sırayla hızlı işleme
+            yield return new WaitForSeconds(0.05f);
         }
     }
-
 
     private void ReturnToPoolIfPossible(GameObject obj)
     {
